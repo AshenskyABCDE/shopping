@@ -6,9 +6,13 @@ import com.sky.result.PageResult;
 import org.apache.xmlbeans.impl.xb.xsdschema.Public;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 
 public interface DishService {
     void saveWithFlavor(DishDTO dishDTO);
 
     PageResult page(DishPageQueryDTO dishPageQueryDTO);
+
+    void deleteBatch(List<Long> ids);
 }
