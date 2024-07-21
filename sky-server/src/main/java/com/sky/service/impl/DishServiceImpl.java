@@ -85,6 +85,7 @@ public class DishServiceImpl implements DishService {
     }
 
     // 根据id查询菜品和口味
+    @Override
     public DishVO getByIdWithFlavor(Long id) {
         // 根据id查询菜品数据
         Dish dish = dishMapper.getById(id);
@@ -97,6 +98,7 @@ public class DishServiceImpl implements DishService {
         return dishVO;
     }
 
+    @Override
     public void updateWithFlavor(DishDTO dishDTO) {
         Dish dish = new Dish();
         BeanUtils.copyProperties(dishDTO, dish);
