@@ -10,6 +10,9 @@ import com.sky.vo.DishVO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+
+import java.util.List;
 
 @Mapper
 public interface DishMapper {
@@ -33,4 +36,14 @@ public interface DishMapper {
 
     @AutoFill(value = OperationType.UPDATE)
     void update(Dish dish);
+
+    @AutoFill(value = OperationType.UPDATE)
+    @Update("update dish set status = 1 where id = #{id}")
+    void updateStatusToOk(Dish dish);
+
+    @AutoFill(value = OperationType.UPDATE)
+    @Update("update dish set status = 0 where id = #{id}")
+    void updateStatusToNot(Dish dish);
+
+    List<Dish> list(Dish dish);
 }
