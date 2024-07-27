@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class ShoppingCartServiceImpl implements ShoppingCartService {
+ public class ShoppingCartServiceImpl implements ShoppingCartService {
     @Autowired
     private ShoppingCartMapper shoppingCartMapper;
 
@@ -80,5 +80,27 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     public void cleanShoppingCart() {
         Long userId = BaseContext.getCurrentId();
         shoppingCartMapper.deleteById(userId);
+    }
+
+    @Override
+    public void subShopping(ShoppingCartDTO shoppingCartDTO) {
+        // 判断购物车商品是否存在
+        ShoppingCart shoppingCart = new ShoppingCart();
+        BeanUtils.copyProperties(shoppingCartDTO,shoppingCart);
+        shoppingCart.setUserId(BaseContext.getCurrentId());
+        List<ShoppingCart> list = shoppingCartMapper.list(shoppingCart);
+
+        // 如果存在了
+        if(list != null && !list.isEmpty()) {
+            ShoppingCart cart = list.get(0);
+            if(cart.getNumber() > 1) {
+                cart.setNumber(cart.getNumber() - 1);
+                shoppingCartMapper.updateNumberById(cart);
+            } else {
+                shoppingCartMapper.deleteById(cart.getUserId());
+            }
+            shoppingCartMapper.updateNumberById(cart);
+        }
+
     }
 }
