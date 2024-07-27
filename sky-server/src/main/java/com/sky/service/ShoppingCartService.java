@@ -10,4 +10,6 @@ public interface ShoppingCartService {
 
     // 在页面中查看购物车
     List<ShoppingCart> showShoppinglist();
+
+    void cleanShoppingCart();
 }
