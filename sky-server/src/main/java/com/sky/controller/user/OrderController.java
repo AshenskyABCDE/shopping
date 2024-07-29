@@ -63,4 +63,11 @@ public class OrderController {
         OrderVO orderVO = orderService.GetOrderDetailById(id);
         return Result.success(orderVO);
     }
+
+    @PutMapping("/cancel/{id}")
+    @ApiOperation("取消订单")
+    public Result CancelById(@PathVariable("id") Long id) {
+        orderService.CancelById(id);
+        return Result.success();
+    }
 }

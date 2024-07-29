@@ -179,4 +179,24 @@ public class OrderServiceImpl implements OrderService {
         return orderVO;
     }
 
+    @Override
+    public void CancelById(Long id) {
+        // 先查询是否存在 也可以用redis缓存
+        // 状态码为6为取消
+        Orders orders = orderMapper.getById(id);
+        if(orders == null) {
+            return ;
+        }
+        if(orders.getStatus() > 2) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+        Orders order = new Orders();
+        order.setId(orders.getId());
+
+        order.setStatus(Orders.CANCELLED);
+        orders.setCancelReason("用户取消");
+        orders.setCancelTime(LocalDateTime.now());
+        orderMapper.update(order);
+    }
+
 }

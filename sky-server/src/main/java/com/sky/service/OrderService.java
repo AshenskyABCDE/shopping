@@ -26,4 +26,6 @@ public interface OrderService {
     PageResult page(int page, int pageSize, Integer status);
 
     OrderVO GetOrderDetailById(Long id);
+
+    void CancelById(Long id);
 }
