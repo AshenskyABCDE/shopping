@@ -70,4 +70,11 @@ public class OrderController {
         orderService.CancelById(id);
         return Result.success();
     }
+
+    @PostMapping("/repetition/{id}")
+    @ApiOperation("再来一单")
+    public Result AgainOne(@PathVariable("id") Long id) {
+        orderService.AgainOne(id);
+        return Result.success();
+    }
 }

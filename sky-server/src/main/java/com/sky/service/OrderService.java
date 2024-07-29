@@ -28,4 +28,6 @@ public interface OrderService {
     OrderVO GetOrderDetailById(Long id);
 
     void CancelById(Long id);
+
+    void AgainOne(Long id);
 }
