@@ -117,3 +117,193 @@ mybatis是进行对数据库的相关操作，无非就是进行curd，在mapper
     </insert>
 ```
 
+
+
+# 登录
+
+## Jwt
+
+Jwt全称Json Web Token
+
+由三部分组成，第一部分Header 记录令牌类型、签名算法等
+
+第二部分携带一些自定义的信息，例如id和username
+
+第三部分签名，防止token被篡改
+
+（1） 登录成功后，生成令牌
+
+（2） 后续每个请求，都要携带jwt令牌，系统在每次请求之前，都要校验token
+
+首先是登录成功之后，生成jwt令牌
+
+```java
+    public static String createJWT(String secretKey, long ttlMillis, Map<String, Object> claims) {
+        // 指定签名的时候使用的签名算法，也就是header那部分
+        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+
+        // 生成JWT的时间
+        long expMillis = System.currentTimeMillis() + ttlMillis;
+        Date exp = new Date(expMillis);
+
+        // 设置jwt的body
+        JwtBuilder builder = Jwts.builder()
+                // 如果有私有声明，一定要先设置这个自己创建的私有的声明，这个是给builder的claim赋值，一旦写在标准的声明赋值之后，就是覆盖了那些标准的声明的
+                .setClaims(claims)
+                // 设置签名使用的签名算法和签名使用的秘钥
+                .signWith(signatureAlgorithm, secretKey.getBytes(StandardCharsets.UTF_8))
+                // 设置过期时间
+                .setExpiration(exp);
+
+        return builder.compact();
+    }
+```
+
+## 拦截器Interceptor
+
+这个就是你打开网站时，点击某个页面如果没有登录会弹到登录页面中，拦截器就算这样的操作
+
+使用拦截器之前要对拦截器进行定义
+
+```java
+public class JwtTokenAdminInterceptor implements HandlerInterceptor {
+
+    @Autowired
+    private JwtProperties jwtProperties;
+
+    /**
+     * 校验jwt
+     *
+     * @param request
+     * @param response
+     * @param handler
+     * @return
+     * @throws Exception
+     */
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        System.out.println("输出当前的id" +  Thread.currentThread().getId());
+
+
+        //判断当前拦截到的是Controller的方法还是其他资源
+        if (!(handler instanceof HandlerMethod)) {
+            //当前拦截到的不是动态方法，直接放行
+            return true;
+        }
+
+        //1、从请求头中获取令牌
+        String token = request.getHeader(jwtProperties.getAdminTokenName());
+
+        //2、校验令牌
+        try {
+            log.info("jwt校验:{}", token);
+            Claims claims = JwtUtil.parseJWT(jwtProperties.getAdminSecretKey(), token);
+            Long empId = Long.valueOf(claims.get(JwtClaimsConstant.EMP_ID).toString());
+            log.info("当前员工id：", empId);
+            BaseContext.setCurrentId(empId);
+            //3、通过，放行
+            return true;
+        } catch (Exception ex) {
+            //4、不通过，响应401状态码
+            response.setStatus(401);
+            return false;
+        }
+    }
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable Exception ex) throws Exception {
+        BaseContext.removeCurrentId();
+    }
+```
+
+prehandle是controller之前的处理，返回true才会放行到controller中，所以在token存在和相应没错误不报出异常才会放行。之后对拦截器进行配置，即可完成
+
+```java
+@Configuration
+@Slf4j
+public class WebMvcConfiguration extends WebMvcConfigurationSupport {
+
+    @Autowired
+    private JwtTokenAdminInterceptor jwtTokenAdminInterceptor;
+
+    @Autowired
+    private JwtTokenUserInterceptor jwtTokenUserInterceptor;
+    /**
+     * 注册自定义拦截器
+     *
+     * @param registry
+     */
+    protected void addInterceptors(InterceptorRegistry registry) {
+        log.info("开始注册自定义拦截器...");
+        registry.addInterceptor(jwtTokenAdminInterceptor)
+                .addPathPatterns("/admin/**")
+                .excludePathPatterns("/admin/employee/login",
+                        "/doc.html",
+                        "/webjars/**");
+
+        registry.addInterceptor(jwtTokenUserInterceptor)
+                .addPathPatterns("/user/**")
+                .excludePathPatterns("/user/user/login")
+                .excludePathPatterns("/user/shop/status");
+    }
+
+    /**
+     * 通过knife4j生成接口文档
+     * @return
+     */
+    @Bean
+    public Docket docket1() {
+        ApiInfo apiInfo = new ApiInfoBuilder()
+                .title("苍穹外卖项目接口文档")
+                .version("2.0")
+                .description("苍穹外卖项目接口文档")
+                .build();
+        Docket docket = new Docket(DocumentationType.SWAGGER_2)
+                .groupName("用户端")
+                .apiInfo(apiInfo)
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("com.sky.controller.admin"))
+                .paths(PathSelectors.any())
+                .build();
+        return docket;
+    }
+
+    @Bean
+    public Docket docket2() {
+        ApiInfo apiInfo = new ApiInfoBuilder()
+                .title("苍穹外卖项目接口文档")
+                .version("2.0")
+                .description("苍穹外卖项目接口文档")
+                .build();
+        Docket docket = new Docket(DocumentationType.SWAGGER_2)
+                .groupName("管理")
+                .apiInfo(apiInfo)
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("com.sky.controller.user"))
+                .paths(PathSelectors.any())
+                .build();
+        return docket;
+    }
+
+    /**
+     * 设置静态资源映射
+     * @param registry
+     */
+    protected void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/doc.html").addResourceLocations("classpath:/META-INF/resources/");
+        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
+    }
+
+    @Override
+    protected void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+        log.info("扩展消息转换器");
+        // 创建一个消息转换器对象
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+        // 需要为消息转换器设置一个对象转换器，对象转换器可以将Java对象序列化为json数据
+        converter.setObjectMapper(new JacksonObjectMapper());
+        // 将消息放进容器
+        converters.add(0,converter);
+    }
+}
+
+```
+
